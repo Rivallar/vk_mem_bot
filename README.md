@@ -29,3 +29,7 @@ And it sends each post only ones (except those pinned at the wall of a public).
 
 `python3 vkbottle_bot.py`<br>
 You need python3 with vkbottle module installed, your bot and app tokens and vkontakte public with all neccessary bot settings.
+
+### Future developement
+
+Although I am totally fine with bots functionality I may consider to add several tweaks to it in the future: an option to send video posts and an option to see posts that where already sent.
