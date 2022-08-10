@@ -33,3 +33,7 @@ You need python3 with vkbottle module installed, your bot and app tokens and vko
 ### Future developement
 
 Although I am totally fine with bots functionality I may consider to add several tweaks to it in the future: an option to send video posts and an option to see posts that where already sent.
+
+![Main menu](https://github.com/Rivallar/vk_mem_bot/blob/master/ScreenShots/main_menu.PNG)
+
+![Additional menu](https://github.com/Rivallar/vk_mem_bot/blob/master/ScreenShots/sec_menu.PNG)
