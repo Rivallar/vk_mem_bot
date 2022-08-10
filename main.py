@@ -4,24 +4,12 @@ from vk_api.longpoll import VkLongPoll, VkEventType
 from vk_api.keyboard import VkKeyboard, VkKeyboardColor
 import tokens
 import shelve
+import json
 
 vk_session = vk_api.VkApi(token=tokens.bot_key)
 longpoll = VkLongPoll(vk_session)
 vk = vk_session.get_api()
 upload = vk_api.VkUpload(vk)
-
-
-def get_image_url(item):
-    """Returns url for preferable image dimensions."""
-
-    url = None
-    for size in item['photo']['sizes']:
-        if size['type'] == 'x':
-            url = size['url']
-            break
-    if not url:
-        url = item['photo']['sizes'][-1]['url']
-    return url
 
 
 def get_fresh_group_posts(group_name):
@@ -46,58 +34,41 @@ def get_fresh_group_posts(group_name):
         group_name_list = group_name_list[-40:]
         groups[group_name] = set(group_name_list)
 
-    # Filtering for only photos and forming post_content: text and image urls
+    # Filtering for only photos and forming post_content
     post_content = []
     for post in posts:
         if post['id'] in fresh_posts:
-            if 'attachments' in post:
-                attach_urls = []
-                for ind, item in enumerate(post['attachments']):
-                    if item['type'] == 'photo':
-                        url = get_image_url(item)
-                        attach_urls.append(url)
-                if attach_urls:
-                    post_content.append({'text': post['text'], 'urls': attach_urls})
+            if all([
+                'attachments' in post,
+                post['attachments'] != None,
+                len(post['text']) < 100
+                    ]):
+                    attachments_info = []
+                    for ind, item in enumerate(post['attachments']):
+                        if item['type'] == 'photo':
+                            attachments_info.append(f'photo{item["photo"]["owner_id"]}_{item["photo"]["id"]}')
+                    if attachments_info:
+                        post_content.append({'text': post['text'], 'attachments_info': attachments_info})
     groups.close()
     return post_content
 
 
-def send_message(user_id, text, keyboard=None):
+def send_message(user_id, text, keyboard=None, carousel=None):
     """Sends information to a user"""
 
     message_dict = {'user_id': user_id, 'message': text, 'random_id': 0}
     if keyboard:
         message_dict['keyboard'] = keyboard.get_keyboard()
+    if carousel:
+        message_dict['template'] = carousel
     vk_session.method('messages.send', message_dict)
 
 
-def prepare_attachment(url, sess):
-    """Prepares attached images for sending to a user"""
-
-    image = sess.get(url, stream=True)
-    photo = upload.photo_messages(photos=image.raw)[0]
-    owner_id = photo['owner_id']
-    photo_id = photo['id']
-    access_key = photo['access_key']
-    attachment = f'photo{owner_id}_{photo_id}_{access_key}'
-    return attachment
-
-
 def send_group_posts(group_name, posts, user_id):
-    """Sends posts of a single group to a user."""
-
-    sess = requests.Session()
     send_message(user_id, f'Посты из группы {group_name}:')
     for post in posts:
-        if len(post['urls']) == 1:
-            attachment = prepare_attachment(post['urls'][0], sess)
-        else:
-            attachment = []
-            for url in post['urls']:
-                attachment.append(prepare_attachment(url, sess))
-        vk.messages.send(user_id=user_id, random_id=0, message=post['text'], attachment=attachment)
+        vk.messages.send(user_id=user_id, random_id=0, message=post['text'], attachment=post['attachments_info'])
     send_message(user_id, f'Посты из {group_name} закончились')
-
 
 def send_group_names(user_id, group_names, text):
     """Sends a list of group names as buttons (3 per line)"""
@@ -117,7 +88,7 @@ def main():
     команды - вывести все доступные команды
     мои группы - вывести список групп с мемами
     мемы - выслать все свежие мемы всех групп сразу
-    мемы группы group_name - свежие мемы одной группы
+    group_name - свежие мемы одной группы
     +group_name - добавить группу в список
     -group_name - убрать группу из списка'''
 
@@ -140,7 +111,7 @@ def main():
                 keyboard.add_button('Мемы', VkKeyboardColor.POSITIVE)
                 keyboard.add_button('Команды', VkKeyboardColor.PRIMARY)
                 keyboard.add_button('Мои группы', VkKeyboardColor.SECONDARY)
-                send_message(user_id, 'Высылаю кнопки', keyboard)
+                send_message(user_id, 'Высылаю кнопки', keyboard=keyboard)
 
             elif msg == 'команды':
                 send_message(user_id, command_list)
@@ -184,6 +155,34 @@ def main():
                         ram_group_names.remove(group_name)
                     except KeyError:
                         send_message(user_id, f'Группы {group_name} нет в списке!')
+
+            elif msg == 'стена':
+                attach = 'video-30022666_456240349'
+                vk.messages.send(user_id=user_id, random_id=0, message='тестим стену',
+                                 attachment=attach)
+
+            elif msg == 'карусель':
+                element = {
+        "title": "Title",
+        "description": "Description",
+        "action": {
+                "type": "open_link",
+                "link": "https://vk.com"
+        },
+        "photo_id": "-30022666_457338521",
+        "buttons": [{
+                "action": {
+                        "type": "text",
+                        "label": "Label"
+                }
+        }]
+}
+                carousel = {
+    "type": "carousel",
+    "elements": [element, element, element]
+        }
+
+                send_message(user_id, 'тестим карусель', carousel=json.dumps(carousel))
 
             else:
                 send_message(user_id, 'Не понял! Напиши "команды" чтобы увидеть список всех команд.')
