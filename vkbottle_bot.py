@@ -6,7 +6,7 @@ from vkbottle.bot import Bot, Message
 import logging
 
 
-logging.disable(logging.DEBUG)
+#logging.disable(logging.DEBUG)
 
 command_list = '''Список доступных команд:
 
@@ -25,11 +25,12 @@ with shelve.open('groups.conf') as groups:
 
 bot = Bot(tokens.bot_key)
 
+
 async def get_fresh_group_posts(message, group_name):
     """Getting fresh posts from groups wall. Taking only those with photos and not seen yet.
     Preparing them as message attachment"""
 
-    request = await bot.api.wall.get(domain=group_name, count=30, access_token=tokens.app_token, v='5.131')
+    request = await bot.api.wall.get(domain=group_name, count=30, access_token=tokens.app_token, v='5.131', ssl=False)
     request_str = request.json()
     request_dict = json.loads(request_str)
     posts = request_dict['items']
