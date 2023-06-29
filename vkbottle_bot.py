@@ -79,7 +79,7 @@ async def send_group_posts(message, posts, group_name):
 
     await message.answer(f'Посты из группы {group_name}:')
     for post in posts:
-        await message.answer(post['text'], attachment=post['attachments_info'])
+        await asyncio.create_task(message.answer(post['text'], attachment=post['attachments_info']))
     await message.answer(f'Посты из {group_name} закончились')
 
 
