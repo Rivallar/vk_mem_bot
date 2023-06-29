@@ -1,12 +1,15 @@
 import shelve
+import time
+
 import tokens
 import json
 from vkbottle import Keyboard, KeyboardButtonColor, Text
 from vkbottle.bot import Bot, Message
 import logging
+import asyncio
 
 
-#logging.disable(logging.DEBUG)
+logging.disable(logging.DEBUG)
 
 command_list = '''Список доступных команд:
 
@@ -78,6 +81,7 @@ async def send_group_posts(message, posts, group_name):
     for post in posts:
         await message.answer(post['text'], attachment=post['attachments_info'])
     await message.answer(f'Посты из {group_name} закончились')
+
 
 async def send_group_names(message, group_names, text, to_delete=False):
     """Sends a list of group names as buttons (3 per line). White buttons to view posts of a group.
@@ -155,15 +159,26 @@ async def message_handler(message: Message) -> str:
             info = 'Ещё группы:'
 
     #send posts of all groups at once
+    # elif message.text.lower() == 'мемы':
+    #     await message.answer("Высылаю посты всех групп сразу")
+    #     for group_name in ram_group_names:
+    #         try:
+    #             posts = await get_fresh_group_posts(message, group_name)
+    #             await send_group_posts(message, posts, group_name)
+    #         except Exception:
+    #             await message.answer(f'Непонятная ошибка при отсылке мемов группы {group_name}')
+    #     await message.answer("На этот раз всё :)")
+
     elif message.text.lower() == 'мемы':
         await message.answer("Высылаю посты всех групп сразу")
+        tasks = []
         for group_name in ram_group_names:
-            try:
-                posts = await get_fresh_group_posts(message, group_name)
-                await send_group_posts(message, posts, group_name)
-            except Exception:
-                await message.answer(f'Непонятная ошибка при отсылке мемов группы {group_name}')
+            tasks.append(asyncio.create_task(get_fresh_group_posts(message, group_name)))
+        results = await asyncio.gather(*tasks)
+        for i, result in enumerate(results):
+            await send_group_posts(message, result, ram_group_names[i])
         await message.answer("На этот раз всё :)")
+
 
     #adds/removes a group from a list
     elif message.text.startswith('+'):
